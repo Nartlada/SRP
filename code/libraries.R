@@ -16,5 +16,6 @@ pacman::p_load(
   gridExtra,
   patchwork,
   DiagrammeRsvg,
-  rsvg
+  rsvg,
+  lmtest
 )
