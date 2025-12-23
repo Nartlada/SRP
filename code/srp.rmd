@@ -27,6 +27,7 @@ theme_gtsummary_compact()
 
 ```{r data}
 source(here('code','srpdata.R'))
+dfss <- df %>% filter(ss_score_pre >= 16)
 ```
 
 ### Table 1: Self stigma before and after SRP activities (n = `r format(nrow(df), big.mark = ",")`)
@@ -53,35 +54,47 @@ tbl_cross(
   modify_source_note(paste0("McNemar's test ", p_apa(p_mcnemar)))
 ```
 
-### Table 2: Characteristics of PLHIV population (n = `r format(nrow(df), big.mark = ",")`)
+### Table 2a: ตารางที่  2 ข้อมูลทั่วไปของผู้อยู่ร่วมกับเชื้อเอชไอวี (n = `r format(nrow(df), big.mark = ",")`)
 
-```{r demo}
+```{r demo1}
 t0 <- df %>%
-  select(sex, age, agegrp, hivyear, arvyear, vl, cd4, arvformula) %>%
+  select(sex, agegrp, age, province_en, h_type2, hivyear, hivyears, arvyear, arvyears, vlgrp, vl_result, cd4grp, last_cd4result, arvformula) %>%
   tbl_summary(
-    type = age ~ "continuous2",
-    statistic = age ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
-    digits = list(age = c(1, 1, 0, 0, 1, 1, 1)),
+    type = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ "continuous2",
+    statistic = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
+    digits = list(
+      c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c(1, 1, 0, 0, 1, 1, 1),
+      all_categorical() ~ c(0, 1)
+    ),
     missing = 'ifany',
-  )
+  ) %>% 
+  bold_labels()
 
 t1 <- df %>%
-  select(ss_pre, sex, age, agegrp, hivyear, arvyear, vl, cd4, arvformula) %>%
+  select(ss_pre, sex, agegrp, age, province_en, h_type2, hivyear, hivyears, arvyear, arvyears, vlgrp, vl_result, cd4grp, last_cd4result, arvformula) %>%
+  mutate(ss_pre = fct_explicit_na(ss_pre, na_level = "Unknown")) %>% 
   tbl_summary(
     by = ss_pre,
-    type = age ~ "continuous2",
-    statistic = age ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
-    digits = list(age = c(1, 1, 0, 0, 1, 1, 1)),
+    type = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ "continuous2",
+    statistic = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
+    digits = list(
+      c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c(1, 1, 0, 0, 1, 1, 1),
+      all_categorical() ~ c(0, 1)
+    ),
     missing = 'ifany',
   )
 
 t2 <- df %>%
-  select(ss_post, sex, age, agegrp, hivyear, arvyear, vl, cd4, arvformula) %>%
+  select(ss_post, sex, agegrp, age, province_en, h_type2, hivyear, hivyears, arvyear, arvyears, vlgrp, vl_result, cd4grp, last_cd4result, arvformula) %>%
+  mutate(ss_post = fct_explicit_na(ss_post, na_level = "Unknown")) %>% 
   tbl_summary(
     by = ss_post,
-    type = age ~ "continuous2",
-    statistic = age ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
-    digits = list(age = c(1, 1, 0, 0, 1, 1, 1)),
+    type = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ "continuous2",
+    statistic = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
+    digits = list(
+      c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c(1, 1, 0, 0, 1, 1, 1),
+      all_categorical() ~ c(0, 1)
+    ),
     missing = 'ifany',
   )
 
@@ -89,33 +102,76 @@ tbl_merge(
   list(t0, t1, t2),
   tab_spanner = c("**Total**", "**Self-stigma before SRP**", "**Self-stigma after SRP**")
 )
-
 ```
 
-### Table 3: Clinical characteristics (n = `r format(nrow(df), big.mark = ",")`)
+### Table 2b: ข้อมูลทั่วไปของผู้อยู่ร่วมกับเชื้อเอชไอวีเฉพาะกลุ่มที่ตีตราตนเอง @baseline (n = `r format(nrow(dfss), big.mark = ",")`)
 
-```{r cli}
+```{r demo2}
+t1 <- dfss %>%
+  select(ss_pre, sex, agegrp, age, province_en, h_type2, hivyear, hivyears, arvyear, arvyears, vlgrp, vl_result, cd4grp, last_cd4result, arvformula) %>%
+  mutate(ss_pre = fct_drop(ss_pre, only = "No")) %>% 
+  tbl_summary(
+    by = ss_pre,
+    type = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ "continuous2",
+    statistic = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
+    digits = list(
+      c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c(1, 1, 0, 0, 1, 1, 1),
+      all_categorical() ~ c(0, 1)
+    ),
+    missing = 'ifany',
+  ) %>% 
+  bold_labels()
+
+t2 <- dfss %>%
+  select(ss_post, sex, agegrp, age, province_en, h_type2, hivyear, hivyears, arvyear, arvyears, vlgrp, vl_result, cd4grp, last_cd4result, arvformula) %>%
+  mutate(ss_post = fct_explicit_na(ss_post, na_level = "Unknown")) %>% 
+  tbl_summary(
+    by = ss_post,
+    type = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ "continuous2",
+    statistic = c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c("{mean}, {sd}", "{min}, {max}", "{median} ({p25}, {p75})"),
+    digits = list(
+      c(age, hivyears, arvyears, vl_result, last_cd4result) ~ c(1, 1, 0, 0, 1, 1, 1),
+      all_categorical() ~ c(0, 1)
+    ),
+    missing = 'ifany',
+  )
+
+tbl_merge(
+  list(t1, t2),
+  tab_spanner = c("**Self-stigma before SRP**", "**Self-stigma after SRP**")
+)
+```
+
+### Table 3a: ข้อมูลคลินิกของผู้อยู่ร่วมกับเชื้อเอชไอวี ที่เข้าร่วมกิจกรรมลดการตีตราตนเอง (n = `r format(nrow(df), big.mark = ",")`)
+
+```{r cli1}
 t0 <- df %>%
   select(type_of_service, depress, drug, du_liquor, du_tobacco, drug_o, knowledge, adh, ltfu, missmed) %>%
   tbl_summary(
     missing = 'ifany',
-    type = c(drug:drug_o, knowledge) ~ 'categorical'
-  )
+    type = c(drug:drug_o, knowledge, ltfu, missmed) ~ 'categorical',
+    digits = list(all_categorical() ~ c(0, 1))
+  ) %>% 
+  bold_labels()
 
 t1 <- df %>%
   select(ss_pre, type_of_service, depress, drug, du_liquor, du_tobacco, drug_o, knowledge, adh, ltfu, missmed) %>%
+  mutate(ss_pre = fct_explicit_na(ss_pre, na_level = "Unknown")) %>% 
   tbl_summary(
     by = ss_pre,
     missing = 'ifany',
-    type = c(drug:drug_o, knowledge) ~ 'categorical'
+    type = c(drug:drug_o, knowledge, ltfu, missmed) ~ 'categorical',
+    digits = list(all_categorical() ~ c(0, 1))
   )
 
 t2 <- df %>%
   select(ss_post, type_of_service, depress, drug, du_liquor, du_tobacco, drug_o, knowledge, adh, ltfu, missmed) %>%
+  mutate(ss_post = fct_explicit_na(ss_post, na_level = "Unknown")) %>% 
   tbl_summary(
     by = ss_post,
     missing = 'ifany',
-    type = c(drug:drug_o, knowledge) ~ 'categorical'
+    type = c(drug:drug_o, knowledge, ltfu, missmed) ~ 'categorical',
+    digits = list(all_categorical() ~ c(0, 1))
   )
 
 tbl_merge(
@@ -123,24 +179,62 @@ tbl_merge(
   tab_spanner = c("**Total**", "**Self-stigma before SRP**", "**Self-stigma after SRP**")
 )
 ```
-``` {r}
+
+### Table 3b: ข้อมูลคลินิกของผู้อยู่ร่วมกับเชื้อเอชไอวี ที่เข้าร่วมกิจกรรมลดการตีตราตนเองเฉพาะกลุ่มที่ตีตราตนเอง @baseline (n = `r format(nrow(dfss), big.mark = ",")`)
+
+```{r cli2}
+t1 <- dfss %>%
+  select(ss_pre, type_of_service, depress, drug, du_liquor, du_tobacco, drug_o, knowledge, adh, ltfu, missmed) %>%
+  mutate(ss_pre = fct_drop(ss_pre, only = "No")) %>% 
+  tbl_summary(
+    by = ss_pre,
+    missing = 'ifany',
+    type = c(drug:drug_o, knowledge, ltfu, missmed) ~ 'categorical',
+    digits = list(all_categorical() ~ c(0, 1))
+  )
+
+t2 <- dfss %>%
+  select(ss_post, type_of_service, depress, drug, du_liquor, du_tobacco, drug_o, knowledge, adh, ltfu, missmed) %>%
+  mutate(ss_post = fct_explicit_na(ss_post, na_level = "Unknown")) %>% 
+  tbl_summary(
+    by = ss_post,
+    missing = 'ifany',
+    type = c(drug:drug_o, knowledge, ltfu, missmed) ~ 'categorical',
+    digits = list(all_categorical() ~ c(0, 1))
+  )
+
+tbl_merge(
+  list(t1, t2),
+  tab_spanner = c("**Self-stigma before SRP**", "**Self-stigma after SRP**")
+)
+```
+
+``` {r lrdata}
 df_lr <- df %>% 
   select(
     ss_pre,
     sex,
     agegrp2,
-    hivyear,
-    arvyear,
-    vl2,
-    cd42,
+    province_en, 
+    h_type2,
+    hiv1year,
+    arv1year,
+    vlgrp2,
+    cd4grp2,
     drug,
     adh,
     ltfu
   ) %>% 
-  drop_na()
+  drop_na() %>% 
+  mutate(
+    across(
+      c(agegrp2, hiv1year, arv1year, cd4grp2, ltfu),
+      ~ fct_relevel(.x, last(levels(.x)))
+    )
+  )
 ```
 
-### Table 4: Factors associated with self-stigma (n=`r nrow(df_lr)`)
+### Table 4: Factors associated with self-stigma (n = `r format(nrow(df_lr), big.mark = ",")`)
 
 ``` {r factors}
 t_freq <- df_lr %>%
@@ -148,7 +242,9 @@ t_freq <- df_lr %>%
     by = ss_pre,
     type = list(c(drug, ltfu) ~ 'categorical'),
     statistic = list(all_continuous() ~ "{mean} ({min}, {max})"),
-    digits = list(all_continuous() ~ c(1, 0, 0))
+    digits = list(all_continuous() ~ c(1, 0, 0),
+                  all_continuous() ~ c(0, 1)),
+    percent = 'row'
   ) %>%
   add_overall() %>%
   bold_labels() %>%
@@ -163,85 +259,86 @@ t_uni <- df_lr %>%
     hide_n = TRUE                           # hide N column
   ) %>%
   add_global_p() %>%                        # show global p instead
-  bold_p(0.3)
+  bold_p(0.2)
 
 fullmodel <- glm(
-  ss_pre ~ arvyear + drug + ltfu,
+  ss_pre ~ sex + agegrp2 + province_en + h_type2 + arv1year + cd4grp2 + ltfu,
   family = "binomial",
   data = df_lr
 )
-summary(fullmodel)
-
+# summary(fullmodel)
+# 
 nullmodel <- glm(
   ss_pre ~ 1,
   family = "binomial",
   data = df_lr
 )
-summary(nullmodel)
-
-model1 <- glm(
-  ss_pre ~ arvyear + ltfu,
-  family = "binomial",
-  data = df_lr
-)
-lrtest(fullmodel, model1)
-summary(model1)
-
+# summary(nullmodel)
+# 
+# model1 <- glm(
+#   ss_pre ~ sex + agegrp2 + cd42 + ltfu,
+#   family = "binomial",
+#   data = df_lr
+# )
+# lrtest(fullmodel, model1)
+# summary(model1)
+# 
 # model2 <- glm(
-#   q3b ~ qyearf + sum7_score + sum3ai_score + sum2a_score,
+#   ss_pre ~ sex + cd42 + ltfu,
 #   family = "binomial",
-#   data = df14
+#   data = df_lr
 # )
-# # lrtest(model1, model2)
-# # summary(model2)
+# lrtest(model1, model2)
+# summary(model2)
 # 
-# model3 <- glm(
-#   q3b ~ qyearf + sum7_score + sum3ai_score,
-#   family = "binomial",
-#   data = df14
-# )
-# # lrtest(model2, model3)
-# # summary(model3)
-# 
-# m1 <- step(fullmodel, direction = "backward", trace = FALSE)
-# m2 <- step(nullmodel, direction = "forward", trace = FALSE,
+m1 <- stepAIC(fullmodel, direction = "backward", trace = FALSE)
+m2 <- stepAIC(nullmodel, direction = "forward", trace = FALSE,
+              scope = list(upper = fullmodel, lower = nullmodel))
+# m3 <- stepAIC(fullmodel, direction="both", trace = FALSE,
 #            scope = list(upper = fullmodel, lower = nullmodel))
-# m3 <- step(fullmodel, direction="both", trace = FALSE,
+# m4 <- stepAIC(nullmodel, direction="both", trace = FALSE,
 #            scope = list(upper = fullmodel, lower = nullmodel))
-# m4 <- step(nullmodel, direction="both", trace = FALSE,
-#            scope = list(upper = fullmodel, lower = nullmodel))
-# # lrtest(m1, m2)
-# # lrtest(m1, m3)
-# # lrtest(m1, m4)
-# # summary(m1)
-# 
-# t_multi <- tbl_regression(m1, exponentiate = TRUE) %>%
-#   add_global_p() %>%                        # show global p instead
-#   bold_p(0.05)
-# 
+# lrtest(m1, m2)
+# lrtest(m1, m3)
+# lrtest(m1, m4)
+# summary(m1)
+
+t_multi <- tbl_regression(m1, exponentiate = TRUE) %>%
+  add_global_p() %>%                        # show global p instead
+  bold_p(0.05)
+
 tbl_merge(
-  # list(t_freq, t_uni, t_multi),
-  # tab_spanner = c('Intention to discriminate', 'Univariate', 'Multivariate')
-  list(t_freq, t_uni),
-  tab_spanner = c('Self stigma', 'Univariate')
+  list(t_freq, t_uni, t_multi),
+  tab_spanner = c('**Self-Stigma**', '**Univariate**', '**Multivariate**')
 ) %>%
-  as_gt() %>%
-  tab_style(style = cell_text(weight = "bold"), locations = cells_column_spanners())
+  as_gt()
 ```
 
-### Table 5: Self stigma mean score before and after SRP activities (n = `r format(nrow(df), big.mark = ",")`)
+### Table 5a: Self stigma mean score before and after SRP activities (n = `r format(nrow(df), big.mark = ",")`)
 
 ``` {r}
 df %>% 
   select(ss_score_pre, ss_score_post) %>% 
   tbl_wide_summary(
-    statistic = c("{mean}", "{sd}", "{median}", "{p25} - {p75}")
+    statistic = c("{N_obs}", "{mean}", "{sd}", "{median}", "{p25} - {p75}")
   )
 
 t.test(df$ss_score_pre, df$ss_score_post, paired = TRUE)
 ```
 
-### Table 6: Self stigma mean score before and after SRP activities (n = `r format(nrow(df), big.mark = ",")`)
+### Table 5b: Self stigma mean score before and after SRP activities with self-stigma score at baseline >= 16 (n = `r format(nrow(dfss), big.mark = ",")`)
+
+``` {r}
+dfss %>% 
+  select(ss_score_pre, ss_score_post) %>% 
+  tbl_wide_summary(
+    statistic = c("{N_obs}", "{mean}", "{sd}", "{median}", "{p25} - {p75}")
+  )
+
+t.test(dfss$ss_score_pre, dfss$ss_score_post, paired = TRUE)
+```
+
+### Table 6a: Self stigma mean score before and after SRP activities (n = `r format(nrow(df), big.mark = ",")`)
 
 ```{r}
 df %>%
@@ -257,7 +354,35 @@ df %>%
   ) %>% 
   tbl_likert(digits = everything() ~ c(0,1)) %>% 
   add_n(statistic = "{N_miss}") %>% 
-  modify_header(n = "**Missing**") %>% 
+  modify_header(n = "**Unknown**") %>% 
+  as_gt() %>% 
+  tab_row_group(label = "8. ฉันไม่อยากไปรับบริการสุขภาพเพราะกลัวคนอื่นจะรู้ว่าฉันติดเชื้อเอชไอวี", rows = 15:16) %>% 
+  tab_row_group(label = "7. ฉันทำให้ครอบครัวอับอาย เนื่องจากติดเชื้อเอชไอวี", rows = 13:14) %>% 
+  tab_row_group(label = "6. ฉันคิดว่าฉันไม่มีอนาคตแล้ว เนื่องจากฉันเป็นผู้ติดเชื้อเอชไอวี", rows = 11:12) %>% 
+  tab_row_group(label = "5. ฉันรู้สึกท้อแท้สิ้นหวัง เนื่องจากฉันติดเชื้อเอชไอวี", rows = 9:10) %>% 
+  tab_row_group(label = "4. ฉันรู้สึกว่าเป็นเวรเป็นกรรมที่ฉันติดเชื้อเอชไอวี", rows = 7:8) %>% 
+  tab_row_group(label = "3. ฉันรู้สึกอายที่ฉันติดเชื้อเอชไอวี", rows = 5:6) %>% 
+  tab_row_group(label = "2. คนอื่นจะสมน้ำหน้า/ซ้ำเติม ถ้ารู้ว่าฉันติดเชื้อเอชไอวี", rows = 3:4) %>% 
+  tab_row_group(label = "1. คนอื่นอาจจะเลิกคบกับฉัน ถ้ารู้ว่าฉันติดเอชไอวี", rows = 1:2)
+```
+
+### Table 6b: Self stigma mean score before and after SRP activities with self-stigma score at baseline >= 16 (n = `r format(nrow(dfss), big.mark = ",")`)
+
+```{r}
+dfss %>%
+  select(
+    ss_break_off_relations, ss_post_break_off_relations,
+    ss_make_it_worse, ss_post_make_it_worse,
+    ss_ashamed, ss_post_ashamed,
+    ss_karma, ss_post_karma,
+    ss_hopeless, ss_post_hopeless,
+    ss_futureless, ss_post_futureless,
+    ss_family_ashamed, ss_post_family_ashamed,
+    ss_no_visit_hc, ss_post_no_visit_hc
+  ) %>% 
+  tbl_likert(digits = everything() ~ c(0,1)) %>% 
+  add_n(statistic = "{N_miss}") %>% 
+  modify_header(n = "**Unknown**") %>% 
   as_gt() %>% 
   tab_row_group(label = "8. ฉันไม่อยากไปรับบริการสุขภาพเพราะกลัวคนอื่นจะรู้ว่าฉันติดเชื้อเอชไอวี", rows = 15:16) %>% 
   tab_row_group(label = "7. ฉันทำให้ครอบครัวอับอาย เนื่องจากติดเชื้อเอชไอวี", rows = 13:14) %>% 

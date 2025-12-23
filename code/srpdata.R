@@ -12,13 +12,13 @@ df <-
   left_join(
     import(here('data', 'hospitals.csv')) %>%
       clean_names() %>%
-      select(h_code = code, name_en),
+      select(h_code = code, province_en, h_type2),
     by = 'h_code') %>%
   left_join(
     import(here('data', 'followup.csv')) %>%
       clean_names() %>%
       group_by(pat_id) %>%
-      slice_min(order_by = visitdate, n = 1) %>%
+      slice_min(order_by = visitdate, n = 1, with_ties = FALSE) %>%
       ungroup() %>%
       select(-c(hn, hcode, enterdate:update_date)),
     by = 'pat_id'
@@ -28,7 +28,6 @@ df <-
       c(ss_break_off_relations:ss_no_visit_hc,
         ss_post_break_off_relations:ss_post_no_visit_hc,
         age,
-        last_cd4result,
         de_little_interest:de_hurting_yourself,
         du_tobacco:du_other,
         tl_sameday_result, 
@@ -44,12 +43,26 @@ df <-
       ),
       ~ as.numeric(.)
     ),
+    na_if(visitdate, '0000-00-00'),
+    hiv_diag_date = if_else(
+      hiv_diag_date == '0000-00-00' | as.Date(hiv_diag_date) < as.Date('1987-01-01'), 
+      NA_character_, 
+      hiv_diag_date
+    ),
+    start_arv_date = if_else(
+      as.Date(start_arv_date) < as.Date('1987-01-01'), 
+      NA_character_, 
+      start_arv_date
+    ),
     vl_result = case_when(
-      vl_result %in% c('< 20', 'Not Detected') ~ 0,
+      vl_result %in% c('<20', '< 20', 'Not Detected') ~ 0,
       !is.na(vl_result) ~ as.numeric(str_extract(vl_result, "^\\d+")),
       TRUE ~ NA_real_
     ),
+    last_cd4result = parse_number(last_cd4result),
     last_cd4result = if_else(last_cd4result > 10000, NA_real_, last_cd4result),
+    province_en = fct_relevel(province_en, "Chiang Rai"),
+    h_type2 = as.factor(h_type2),
     ss_score_pre = if_else(
       if_all(ss_break_off_relations:ss_no_visit_hc, is.na),
       NA_real_,
@@ -90,24 +103,49 @@ df <-
     ),
     agegrp2 = cut(
       age,
-      breaks = c(-Inf, 24, 34, 54, Inf),
-      labels = c('<25', '25-34', '35-54', '>= 55')
+      breaks = c(-Inf, 24, 34, 44, 54, Inf),
+      labels = c('<25', '25-34', '35-44', '45-54', '>= 55')
     ),
     hiv_diag_date = if_else(
       hiv_diag_date %in% c("0000-00-00", "NULL"),
       NA_character_,
       hiv_diag_date
     ),
+    hivyears = time_length(interval(hiv_diag_date, visitdate), unit = "years"),
+    hivmonths = time_length(interval(hiv_diag_date, visitdate), unit = "months"),
     hivyear = cut(
-      time_length(interval(hiv_diag_date, visitdate), unit = "years"),
+      hivyears,
       breaks = c(-Inf, 1, 5, 10, Inf),
       labels = c('<= 1 year', '> 1 - 5 years', '> 5 - 10 years', '> 10 years'),
       right = TRUE
     ),
+    hiv1year = cut(
+      hivyears,
+      breaks = c(-Inf, 1, Inf),
+      labels = c('<= 1 year', '> 1 year'),
+      right = TRUE
+    ),
+    hiv3month = cut(
+      hivmonths,
+      breaks = c(-Inf, 3, Inf),
+      labels = c('<= 3 months', '> 3 months'),
+      right = TRUE
+    ),
+    hiv6month = cut(
+      hivmonths,
+      breaks = c(-Inf, 6, Inf),
+      labels = c('<= 6 months', '> 6 months'),
+      right = TRUE
+    ),
     arvyears = case_when(
-      start_arv_date == "0000-00-00" ~ 0,
+      start_arv_date == '0000-00-00' ~ 0,
       is.na(start_arv_date) ~ NA_real_,
       TRUE ~ time_length(interval(start_arv_date, visitdate), unit = "years")
+    ),
+    arvmonths = case_when(
+      start_arv_date == '0000-00-00' ~ 0,
+      is.na(start_arv_date) ~ NA_real_,
+      TRUE ~ time_length(interval(start_arv_date, visitdate), unit = "months")
     ),
     arvyear = cut(
       arvyears,
@@ -115,7 +153,25 @@ df <-
       labels = c('Not on ARV', '<= 1 year', '> 1 - 5 years', '> 5 - 10 years', '> 10 years'),
       right = TRUE
     ),
-    vl = factor(
+    arv1year = cut(
+      arvyears,
+      breaks = c(-Inf, 1, Inf),
+      labels = c('<= 1 year', '> 1 year'),
+      right = TRUE
+    ),
+    arv3month = cut(
+      arvmonths,
+      breaks = c(-Inf, 3, Inf),
+      labels = c('<= 3 months', '> 3 months'),
+      right = TRUE
+    ),
+    arv6month = cut(
+      arvmonths,
+      breaks = c(-Inf, 6, Inf),
+      labels = c('<= 6 months', '> 6 months'),
+      right = TRUE
+    ),
+    vlgrp = factor(
       case_when(
         vl_result < 200 ~ 1,
         between(vl_result, 200, 1000) ~ 2,
@@ -125,7 +181,7 @@ df <-
       levels = 1:3,
       labels = c('<200', '200-1000', '>1000')
     ),
-    vl2 = factor(
+    vlgrp2 = factor(
       case_when(
         vl_result < 200 ~ 1,
         vl_result >= 200 ~ 2,
@@ -134,7 +190,7 @@ df <-
       levels = 1:2,
       labels = c('< 200', '>= 200')
     ),
-    cd4 = factor(
+    cd4grp = factor(
       case_when(
         last_cd4result < 200 ~ 1,
         between(last_cd4result, 200, 349) ~ 2,
@@ -144,7 +200,7 @@ df <-
       levels = 1:3,
       labels = c('<200', '200-349', '>=350')
     ),
-    cd42 = factor(
+    cd4grp2 = factor(
       case_when(
         last_cd4result < 200 ~ 1,
         last_cd4result >= 200 ~ 2,
@@ -253,14 +309,14 @@ df <-
   select(
     ss_break_off_relations:ss_no_visit_hc, ss_score_pre, ss_pre, 
     ss_post_break_off_relations:ss_post_no_visit_hc, ss_score_post, ss_post,
-    h_code,
+    h_code, province_en, h_type2,
     sex,
-    age, agegrp,  agegrp2,
+    age, agegrp, agegrp2,
     visitdate,
-    hiv_diag_date, hivyear,
-    start_arv_date, arvyears, arvyear,
-    vl_result, vl, vl2,
-    last_cd4result, cd4, cd42,
+    hiv_diag_date, hivyears, hivmonths, hivyear, hiv1year, hiv3month, hiv6month,
+    start_arv_date, arvyears, arvmonths, arvyear, arv1year, arv3month, arv6month,
+    vl_result, vlgrp, vlgrp2,
+    last_cd4result, cd4grp, cd4grp2,
     regimen, regimen_other, arvformula,
     type_of_service,
     de_little_interest:de_hurting_yourself, depress,
@@ -277,29 +333,43 @@ df <-
     tl_gov_health_serv_result, know_mean, knowledge,
     adh_this_visit, adh,
     lostfu_last_visit, ltfu,
-    miss_medicine, missmed
+    miss_medicine, missmed,
   ) %>% 
   set_variable_labels(
     ss_pre = 'Self-stigma (Baseline)',
     ss_post = 'Self-stigma (Post immediate)',
     h_code = 'Hospital',
+    province_en = 'Province',
+    h_type2 = 'Hospital type',
     sex = 'Sex',
-    age = 'Age',
-    agegrp = 'Age group', 
-    agegrp2 = 'Age group', 
+    age = 'Age (years)',
+    agegrp = 'Age (years)', 
+    agegrp2 = 'Age (years)', 
+    hivyears = 'Years of HIV infection',
+    hivmonths = 'Months of HIV infection',
     hivyear = 'Years of HIV infection',
+    hiv1year = 'Years of HIV infection',
+    hiv3month = 'Years of HIV infection',
+    hiv6month = 'Years of HIV infection',
+    arvyears = 'Years on ARV',
+    arvmonths = 'Months on ARV',
     arvyear = 'Years on ARV',
-    vl = 'Last VL (copies/ml)', 
-    vl2 = 'Last VL (copies/ml)', 
-    cd4 = 'Last CD4 (cells/µL)',
-    cd42 = 'Last CD4 (cells/µL)',
+    arv1year = 'Years on ARV',
+    arv3month = 'Years on ARV',
+    arv6month = 'Years on ARV',
+    vl_result = 'Last VL (copies/ml)',
+    vlgrp = 'Last VL (copies/ml)', 
+    vlgrp2 = 'Last VL (copies/ml)', 
+    last_cd4result = 'Last CD4 (cells/µL)',
+    cd4grp = 'Last CD4 (cells/µL)',
+    cd4grp2 = 'Last CD4 (cells/µL)',
     arvformula = 'ARV Formula',
     type_of_service = 'Type of service',
     depress = 'Depression',
     drug = 'Drug use',
     du_tobacco = 'Tobacco',
     du_liquor = 'Alcohol',
-    drug_o = 'Other',
+    drug_o = 'Other drug',
     knowledge = 'HIV knowledge',
     adh = 'Adherence',
     ltfu = 'Lost to follow up',
@@ -321,5 +391,5 @@ df <-
     ss_family_ashamed = ' - ก่อนร่วมกิจกรรม',
     ss_post_family_ashamed = ' - หลังร่วมกิจกรรม',
     ss_no_visit_hc = ' - ก่อนร่วมกิจกรรม',
-    ss_post_no_visit_hc = ' - หลังร่วมกิจกรรม'
+    ss_post_no_visit_hc = ' - หลังร่วมกิจกรรม',
   )
